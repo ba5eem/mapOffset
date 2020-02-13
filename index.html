@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+ <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+ <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+
+<head>
+  <meta charset="UTF-8">
+  <title>offset</title>
+</head>
+<body>
+   <div id="mapid"></div>
+
+</body>
+</html>
+
+<style>
+
+  #mapid { height: 800px; }
+
+</style>
+
+<script>
+  var url = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  var attribution = "<a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a>____";
+  var center = [21.2901808, -157.8299651];
+  var mymap = L.map('mapid').setView([21.2901808, -157.8299651], 18);
+  L.tileLayer(url, { attribution: attribution, maxZoom: 18 }).addTo(mymap);
+  var markersLayer = new L.LayerGroup();
+  function marker(lat,lng){
+    return L.marker([lat,lng]).addTo(mymap);
+  }
+
+
+
+  function findOffset(lat, lng, n, e){ // math :)
+    var eartRadius=6378137;
+    var distanceNorthOffset = n;
+    var distanceEastOffset = e;
+
+    var dLat = distanceNorthOffset/eartRadius;
+    var dLng = distanceEastOffset/(eartRadius*Math.cos(Math.PI*lat/180));
+
+    var latOffset = lat + dLat * 180/Math.PI
+    var lngOffset = lng + dLng * 180/Math.PI
+
+    return [latOffset,lngOffset];
+}
+
+
+function makePlot(lat,lng){
+    var distances = [10,20,30,40,50,60,70,80,90,100]; // distance in meters
+    var N = distances.map(e => findOffset(lat,lng,e,0));
+    var S = distances.map(e => findOffset(lat,lng,-e,0));
+    var E = distances.map(e => findOffset(lat,lng,0,e));
+    var W = distances.map(e => findOffset(lat,lng,0,-e));
+    var NE = distances.map(e => findOffset(lat,lng,e,e));
+    var SE = distances.map(e => findOffset(lat,lng,-e,e));
+    var NW = distances.map(e => findOffset(lat,lng,e,-e));
+    var SW = distances.map(e => findOffset(lat,lng,-e,-e));
+    return [...N,...S,...E,...W,...NE,...SE,...NW,...SW]; // concat all arrays into one array to loop
+}
+
+  mymap.on('click', function(e) { // e = event object contains coords
+    var lat = e.latlng.lat;
+    var lng = e.latlng.lng;
+    var arr = makePlot(lat,lng);
+    arr.map(e => { // loop through all [lat,lng]
+      markersLayer.addLayer(marker(e[0],e[1]).bindPopup(`lat:${e[0]},lng:${e[1]}`));
+    })
+  });
+
+
+</script>
